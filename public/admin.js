@@ -178,6 +178,12 @@ function renderProducts() {
   }
 
   products.forEach((product) => {
+    const situation = !product.ativo
+      ? '<span class="pill warn">Indisponível</span>'
+      : product.quantidade_disponivel <= 0
+        ? '<span class="pill bad">Esgotado</span>'
+        : '<span class="pill good">Disponível</span>';
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${product.nome}</strong><br><span class="muted">${product.descricao || ""}</span></td>
@@ -185,7 +191,7 @@ function renderProducts() {
       <td>${product.quantidade_maxima}</td>
       <td>${product.quantidade_vendida}</td>
       <td>${product.quantidade_disponivel}</td>
-      <td>${product.quantidade_disponivel <= 0 ? '<span class="pill bad">Esgotado</span>' : '<span class="pill good">Disponível</span>'}</td>
+      <td>${situation}</td>
       <td><button class="secondary" data-toggle="${product.id}">${product.ativo ? "Desativar" : "Ativar"}</button></td>
     `;
     tbody.appendChild(tr);
