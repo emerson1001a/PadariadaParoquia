@@ -108,12 +108,21 @@ function selectedCampaign() {
   return campaigns.find((item) => item.id === selectedCampaignId);
 }
 
+function canDeleteCampaign(campaign) {
+  return campaign && (
+    campaign.status === "encerrada_automaticamente" ||
+    campaign.status === "encerrada_manualmente" ||
+    campaign.status === "finalizada"
+  );
+}
+
 async function loadSelectedCampaign() {
   const campaign = selectedCampaign();
   if (!campaign) return;
 
   el("selectedCampaignTitle").textContent = campaign.titulo;
   el("selectedCampaignMeta").innerHTML = `Retirada: ${dateOnly(campaign.data_retirada)} • Prazo: ${dateTime(campaign.prazo_final_pedidos)} • ${pill(campaign.status)}`;
+  el("deleteCampaignBtn").disabled = !canDeleteCampaign(campaign);
 
   const { data: productRows } = await db
     .from("produtos_campanha_resumo")
@@ -306,6 +315,25 @@ async function setCampaignStatus(status) {
   await loadCampaigns();
 }
 
+async function deleteSelectedCampaign() {
+  const campaign = selectedCampaign();
+  if (!campaign) return;
+
+  if (!canDeleteCampaign(campaign)) {
+    alert("Só é possível apagar campanhas encerradas ou finalizadas.");
+    return;
+  }
+
+  const confirmed = confirm(`Apagar a campanha "${campaign.titulo}"?\n\nIsso também apaga os produtos e pedidos dessa campanha.`);
+  if (!confirmed) return;
+
+  const { error } = await db.from("campanhas").delete().eq("id", campaign.id);
+  if (error) return alert(error.message);
+
+  selectedCampaignId = null;
+  await loadCampaigns();
+}
+
 async function addProduct() {
   el("productMessage").innerHTML = "";
   const campaign = selectedCampaign();
@@ -386,6 +414,7 @@ el("createCampaignBtn").addEventListener("click", createCampaign);
 el("openCampaignBtn").addEventListener("click", () => setCampaignStatus("aberta"));
 el("closeCampaignBtn").addEventListener("click", () => setCampaignStatus("encerrada_manualmente"));
 el("finishCampaignBtn").addEventListener("click", () => setCampaignStatus("finalizada"));
+el("deleteCampaignBtn").addEventListener("click", deleteSelectedCampaign);
 el("addProductBtn").addEventListener("click", addProduct);
 el("orderSearch").addEventListener("input", renderOrders);
 el("orderFilter").addEventListener("change", renderOrders);
