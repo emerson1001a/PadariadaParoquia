@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Padaria da Paróquia Santa Terezinha</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">ST</div>
+        <div>
+          <h1>Paróquia Santa Terezinha</h1>
+          <div class="muted">Encomendas da padaria</div>
+        </div>
+      </div>
+      <a href="/admin">Administração</a>
+    </header>
+
+    <section id="loading" class="card">Carregando campanha...</section>
+
+    <section id="empty" class="card hidden">
+      <h2>Nenhuma campanha aberta</h2>
+      <p class="muted">Aguarde a próxima venda da Padaria da Paróquia.</p>
+    </section>
+
+    <section id="app" class="hidden">
+      <div class="grid">
+        <div class="stack">
+          <div class="card stack">
+            <div>
+              <h2 id="campaignTitle"></h2>
+              <p class="muted" id="campaignDates"></p>
+            </div>
+            <div class="notice" id="customerMessage"></div>
+            <div id="closedMessage" class="error hidden">
+              Os pedidos para esta campanha já foram encerrados. Acompanhe a próxima venda da Padaria da Paróquia.
+            </div>
+          </div>
+
+          <div class="card stack">
+            <h2>Seus dados</h2>
+            <div class="field">
+              <label for="customerName">Nome completo</label>
+              <input id="customerName" autocomplete="name" placeholder="Ex.: Maria Silva">
+            </div>
+            <div class="field">
+              <label for="customerPhone">Telefone ou WhatsApp</label>
+              <input id="customerPhone" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+            </div>
+          </div>
+
+          <div class="card stack">
+            <div class="row between">
+              <h2>Produtos disponíveis</h2>
+              <span class="pill" id="productCount"></span>
+            </div>
+            <div id="products" class="stack"></div>
+          </div>
+        </div>
+
+        <aside class="stack">
+          <div class="card stack">
+            <h2>Resumo do pedido</h2>
+            <div id="summary" class="muted">Escolha pelo menos um produto.</div>
+            <div class="totalBox">
+              <span>Total a pagar na retirada</span>
+              <span class="totalValue" id="total">R$ 0,00</span>
+            </div>
+            <button id="submitOrder" disabled>Finalizar pedido</button>
+            <div id="message"></div>
+          </div>
+
+          <div id="duplicateBox" class="card stack hidden">
+            <h2>Pedido já registrado</h2>
+            <p class="muted">Já existe um pedido para este telefone nesta campanha.</p>
+            <div id="duplicateDetails"></div>
+            <button id="replaceOrder">Substituir pelo pedido atual</button>
+            <button class="secondary" id="keepOrder">Manter pedido existente</button>
+          </div>
+
+          <div id="confirmation" class="card stack hidden">
+            <h2>Pedido confirmado</h2>
+            <div id="confirmationText" class="success"></div>
+            <button class="secondary" id="copyConfirmation">Copiar confirmação</button>
+            <button class="secondary" id="newOrder">Fazer outro pedido</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

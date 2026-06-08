@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração | Padaria da Paróquia</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <section id="loginView" class="login">
+    <div class="card stack">
+      <div class="brand">
+        <div class="mark">ST</div>
+        <div>
+          <h1>Administração</h1>
+          <div class="muted">Padaria da Paróquia Santa Terezinha</div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" value="admin@paroquia.local">
+      </div>
+      <div class="field">
+        <label for="password">Senha</label>
+        <input id="password" type="password" value="admin123">
+      </div>
+      <button id="loginBtn">Entrar</button>
+      <div id="loginMessage"></div>
+    </div>
+  </section>
+
+  <main id="adminView" class="wrap hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">ST</div>
+        <div>
+          <h1>Padaria da Paróquia</h1>
+          <div class="muted">Painel administrativo</div>
+        </div>
+      </div>
+      <div class="row">
+        <a href="/">Página pública</a>
+        <button class="secondary" id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <div class="adminGrid">
+      <aside class="stack">
+        <div class="card stack">
+          <h2>Campanhas</h2>
+          <div id="campaignList" class="stack"></div>
+        </div>
+
+        <div class="card stack">
+          <h2>Nova campanha</h2>
+          <div class="field">
+            <label for="campaignTitleInput">Título</label>
+            <input id="campaignTitleInput" value="Venda de Paes - Quarta-feira">
+          </div>
+          <div class="field">
+            <label for="pickupDate">Data da retirada</label>
+            <input id="pickupDate" type="date">
+          </div>
+          <div class="field">
+            <label for="deadlineDate">Data limite</label>
+            <input id="deadlineDate" type="date">
+          </div>
+          <div class="field">
+            <label for="deadlineTime">Horário limite</label>
+            <input id="deadlineTime" type="time" value="18:00">
+          </div>
+          <div class="field">
+            <label for="customerMessageInput">Mensagem ao cliente</label>
+            <textarea id="customerMessageInput">Retirada na Paróquia Santa Terezinha. Pagamento no momento da retirada.</textarea>
+          </div>
+          <button id="createCampaignBtn">Criar campanha</button>
+          <div id="campaignMessage"></div>
+        </div>
+      </aside>
+
+      <section class="stack">
+        <div class="card stack">
+          <div class="row between">
+            <div>
+              <h2 id="selectedCampaignTitle">Selecione uma campanha</h2>
+              <div class="muted" id="selectedCampaignMeta"></div>
+            </div>
+            <div class="row">
+              <button class="good" id="openCampaignBtn">Abrir</button>
+              <button class="secondary" id="closeCampaignBtn">Encerrar</button>
+              <button class="secondary" id="finishCampaignBtn">Finalizar</button>
+            </div>
+          </div>
+          <div class="metricGrid">
+            <div class="metric"><span>Pedidos</span><strong id="mOrders">0</strong></div>
+            <div class="metric"><span>Clientes</span><strong id="mCustomers">0</strong></div>
+            <div class="metric"><span>Itens vendidos</span><strong id="mItems">0</strong></div>
+            <div class="metric"><span>Total previsto</span><strong id="mTotal">R$ 0,00</strong></div>
+            <div class="metric"><span>Retirado e pago</span><strong id="mPaid">R$ 0,00</strong></div>
+            <div class="metric"><span>Pendente</span><strong id="mPending">R$ 0,00</strong></div>
+            <div class="metric"><span>Ticket médio</span><strong id="mTicket">R$ 0,00</strong></div>
+            <div class="metric"><span>Cancelados</span><strong id="mCancelled">0</strong></div>
+          </div>
+        </div>
+
+        <div class="card stack">
+          <div class="tabs">
+            <button class="active" data-tab="productsTab">Produtos</button>
+            <button data-tab="ordersTab">Pedidos</button>
+            <button data-tab="productionTab">Produção</button>
+            <button data-tab="csvTab">CSV</button>
+          </div>
+        </div>
+
+        <div id="productsTab" class="tab stack">
+          <div class="card stack">
+            <h2>Novo produto</h2>
+            <div class="row">
+              <div class="field" style="flex:2">
+                <label for="productName">Produto</label>
+                <input id="productName" placeholder="Ex.: Pão italiano">
+              </div>
+              <div class="field" style="flex:1">
+                <label for="productPrice">Preço</label>
+                <input id="productPrice" inputmode="decimal" placeholder="18,00">
+              </div>
+              <div class="field" style="flex:1">
+                <label for="productMax">Máximo</label>
+                <input id="productMax" type="number" min="0" placeholder="30">
+              </div>
+            </div>
+            <div class="field">
+              <label for="productDescription">Descrição</label>
+              <input id="productDescription" placeholder="Ex.: Unidade grande">
+            </div>
+            <button id="addProductBtn">Adicionar produto</button>
+            <div id="productMessage"></div>
+          </div>
+
+          <div class="card tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Preço</th>
+                  <th>Máximo</th>
+                  <th>Vendido</th>
+                  <th>Disponível</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="productsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="ordersTab" class="tab stack hidden">
+          <div class="card row">
+            <input id="orderSearch" placeholder="Pesquisar por nome ou telefone">
+            <select id="orderFilter">
+              <option value="">Todas situações</option>
+              <option value="aguardando_retirada">Aguardando retirada</option>
+              <option value="retirado_pago">Retirado e pago</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <div class="card tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pedido</th>
+                  <th>Cliente</th>
+                  <th>Itens</th>
+                  <th>Total</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="productionTab" class="tab stack hidden">
+          <div class="card tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Quantidade encomendada</th>
+                  <th>Quantidade máxima</th>
+                  <th>Saldo</th>
+                </tr>
+              </thead>
+              <tbody id="productionTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="csvTab" class="tab stack hidden">
+          <div class="card stack">
+            <h2>Exportar dados</h2>
+            <div class="row">
+              <button class="secondary" data-csv="orders">Lista de pedidos</button>
+              <button class="secondary" data-csv="production">Resumo de produção</button>
+              <button class="secondary" data-csv="finance">Resumo financeiro</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/config.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
