@@ -1,0 +1,13 @@
+{
+  "name": "padaria-da-paroquia",
+  "version": "1.0.0",
+  "description": "Encomendas da Padaria da Paroquia Santa Terezinha",
+  "scripts": {
+    "start": "npx serve public",
+    "test": "node --check public/app.js && node --check public/admin.js"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  },
+  "devDependencies": {}
+}
