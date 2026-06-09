@@ -1,7 +1,7 @@
 let campaign = null;
 let duplicateOrder = null;
 
-const state = { quantities: {}, submitting: false };
+const state = { quantities: {}, submitStatus: "idle" };
 const config = window.PADARIA_CONFIG || {};
 const db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
@@ -169,14 +169,18 @@ function renderSummary() {
     onlyDigits(el("customerPhone").value).length >= 10 &&
     items.length;
 
-  el("submitOrder").disabled = state.submitting || !valid;
+  el("submitOrder").disabled = state.submitStatus !== "idle" || !valid;
 }
 
-function setSubmitState(submitting) {
-  state.submitting = submitting;
+function setSubmitState(status) {
+  state.submitStatus = status;
   const button = el("submitOrder");
-  button.classList.toggle("ghost", submitting);
-  button.textContent = submitting ? "Enviando pedido..." : "Finalizar pedido";
+  button.classList.toggle("ghost", status !== "idle");
+  button.textContent = {
+    idle: "Finalizar pedido",
+    sending: "Enviando pedido...",
+    sent: "Pedido enviado"
+  }[status];
   renderSummary();
 }
 
@@ -203,8 +207,8 @@ async function getExistingOrder(orderId) {
 }
 
 async function submitOrder(replaceId = null) {
-  if (state.submitting) return;
-  setSubmitState(true);
+  if (state.submitStatus !== "idle") return;
+  setSubmitState("sending");
   el("message").innerHTML = "";
   el("duplicateBox").classList.add("hidden");
 
@@ -213,27 +217,27 @@ async function submitOrder(replaceId = null) {
 
   if (error) {
     el("message").innerHTML = `<div class="error">${error.message}</div>`;
-    setSubmitState(false);
+    setSubmitState("idle");
     return;
   }
 
   if (!result.ok && result.code === "pedido_duplicado") {
     duplicateOrder = await getExistingOrder(result.pedido_id);
     renderDuplicate(duplicateOrder);
-    setSubmitState(false);
+    setSubmitState("idle");
     return;
   }
 
   if (!result.ok) {
     el("message").innerHTML = `<div class="error">${result.message || "Não foi possível registrar o pedido."}</div>`;
     await loadCampaignFresh();
-    setSubmitState(false);
+    setSubmitState("idle");
     return;
   }
 
   renderConfirmation(result);
   await loadCampaignFresh(false);
-  setSubmitState(false);
+  setSubmitState("sent");
 }
 
 function renderDuplicate(order) {
@@ -265,6 +269,7 @@ function renderConfirmation(order) {
 async function loadCampaignFresh(resetQuantities = true) {
   if (resetQuantities) {
     Object.keys(state.quantities).forEach((key) => delete state.quantities[key]);
+    setSubmitState("idle");
   }
   await loadCampaign();
 }
