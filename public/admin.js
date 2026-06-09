@@ -43,6 +43,43 @@ function dateOnly(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(value + "T12:00:00"));
 }
 
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function whatsappPhone(value) {
+  const digits = onlyDigits(value);
+  if (!digits) return "";
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function orderItemsText(order) {
+  return (order.itens_pedido || [])
+    .map((item) => `${item.quantidade}x ${item.nome_produto_snapshot}`)
+    .join("\n");
+}
+
+function confirmationMessage(order) {
+  const campaign = selectedCampaign();
+  const pickup = campaign ? dateOnly(campaign.data_retirada) : "";
+  return [
+    `Olá, ${order.nome_cliente}! Seu pedido da Padaria da Paróquia foi confirmado.`,
+    "",
+    `Pedido: ${order.numero_pedido}`,
+    orderItemsText(order),
+    `Total: ${money(order.valor_total)}`,
+    pickup ? `Retirada: ${pickup}` : "",
+    "",
+    "Pagamento no momento da retirada."
+  ].filter(Boolean).join("\n");
+}
+
+function whatsappUrl(order) {
+  const phone = whatsappPhone(order.telefone_cliente);
+  const text = encodeURIComponent(confirmationMessage(order));
+  return `https://wa.me/${phone}?text=${text}`;
+}
+
 async function ensureSession() {
   const { data } = await db.auth.getSession();
   if (data.session) showAdmin();
@@ -83,23 +120,9 @@ async function loadCampaigns() {
   const { data, error } = await db.from("campanhas").select("*").order("id", { ascending: false });
   if (error) return alert(error.message);
   campaigns = data || [];
-  await deactivateProductsForClosedCampaigns(campaigns);
   if (!selectedCampaignId && campaigns.length) selectedCampaignId = campaigns[0].id;
   renderCampaignList();
   await loadSelectedCampaign();
-}
-
-async function deactivateProductsForClosedCampaigns(campaignRows) {
-  const closedCampaignIds = (campaignRows || [])
-    .filter((campaign) => statusDisablesProducts(campaign.status))
-    .map((campaign) => campaign.id);
-  if (!closedCampaignIds.length) return;
-
-  const { error } = await db
-    .from("produtos_campanha")
-    .update({ ativo: false })
-    .in("campanha_id", closedCampaignIds);
-  if (error) alert(error.message);
 }
 
 function renderCampaignList() {
@@ -128,10 +151,6 @@ function canDeleteCampaign(campaign) {
     campaign.status === "encerrada_manualmente" ||
     campaign.status === "finalizada"
   );
-}
-
-function statusDisablesProducts(status) {
-  return String(status).startsWith("encerrada") || status === "finalizada";
 }
 
 function clearSelectedCampaignDetails(message = "Selecione uma campanha") {
@@ -312,11 +331,16 @@ function bindOrderButtons(root) {
 }
 
 async function confirmOrder(orderId) {
+  const order = orders.find((item) => item.id === Number(orderId));
+  if (!order) return;
+
   const { error } = await db
     .from("pedidos")
     .update({ confirmado_em: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", orderId);
   if (error) return alert(error.message);
+
+  window.open(whatsappUrl(order), "_blank", "noopener");
   await loadSelectedCampaign();
 }
 
@@ -368,13 +392,6 @@ async function setCampaignStatus(status) {
   if (String(status).startsWith("encerrada")) patch.encerrada_em = new Date().toISOString();
   const { error } = await db.from("campanhas").update(patch).eq("id", campaign.id);
   if (error) return alert(error.message);
-  if (statusDisablesProducts(status)) {
-    const { error: productError } = await db
-      .from("produtos_campanha")
-      .update({ ativo: false })
-      .eq("campanha_id", campaign.id);
-    if (productError) return alert(productError.message);
-  }
   await loadCampaigns();
 }
 
