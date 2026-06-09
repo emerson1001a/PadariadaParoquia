@@ -43,43 +43,6 @@ function dateOnly(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(value + "T12:00:00"));
 }
 
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function whatsappPhone(value) {
-  const digits = onlyDigits(value);
-  if (!digits) return "";
-  return digits.startsWith("55") ? digits : `55${digits}`;
-}
-
-function orderItemsText(order) {
-  return (order.itens_pedido || [])
-    .map((item) => `${item.quantidade}x ${item.nome_produto_snapshot}`)
-    .join("\n");
-}
-
-function confirmationMessage(order) {
-  const campaign = selectedCampaign();
-  const pickup = campaign ? dateOnly(campaign.data_retirada) : "";
-  return [
-    `Olá, ${order.nome_cliente}! Seu pedido da Padaria da Paróquia foi confirmado.`,
-    "",
-    `Pedido: ${order.numero_pedido}`,
-    orderItemsText(order),
-    `Total: ${money(order.valor_total)}`,
-    pickup ? `Retirada: ${pickup}` : "",
-    "",
-    "Pagamento no momento da retirada."
-  ].filter(Boolean).join("\n");
-}
-
-function whatsappUrl(order) {
-  const phone = whatsappPhone(order.telefone_cliente);
-  const text = encodeURIComponent(confirmationMessage(order));
-  return `https://wa.me/${phone}?text=${text}`;
-}
-
 async function ensureSession() {
   const { data } = await db.auth.getSession();
   if (data.session) showAdmin();
@@ -294,9 +257,6 @@ function renderOrders() {
   }
 
   visible.forEach((order) => {
-    const confirmationButton = order.confirmado_em
-      ? `<button class="good" data-confirm="${order.id}" disabled>Pedido confirmado</button>`
-      : `<button class="secondary" data-confirm="${order.id}" ${order.status === "cancelado" ? "disabled" : ""}>Confirmar pedido</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${order.numero_pedido}</strong><br><span class="muted">${dateTime(order.created_at)}</span></td>
@@ -306,7 +266,6 @@ function renderOrders() {
       <td>${pill(order.status)}</td>
       <td>
         <div class="row">
-          ${confirmationButton}
           <button class="good" data-paid="${order.id}" ${order.status === "retirado_pago" ? "disabled" : ""}>Pago</button>
           <button class="secondary" data-pending="${order.id}" ${order.status === "aguardando_retirada" ? "disabled" : ""}>Aguardando</button>
           <button class="bad" data-cancel="${order.id}" ${order.status === "cancelado" ? "disabled" : ""}>Cancelar</button>
@@ -320,7 +279,6 @@ function renderOrders() {
 }
 
 function bindOrderButtons(root) {
-  root.querySelectorAll("[data-confirm]").forEach((button) => button.addEventListener("click", () => confirmOrder(button.dataset.confirm)));
   root.querySelectorAll("[data-paid]").forEach((button) => button.addEventListener("click", () => updateOrderStatus(button.dataset.paid, "retirado_pago")));
   root.querySelectorAll("[data-pending]").forEach((button) => button.addEventListener("click", () => updateOrderStatus(button.dataset.pending, "aguardando_retirada")));
   root.querySelectorAll("[data-cancel]").forEach((button) => {
@@ -328,20 +286,6 @@ function bindOrderButtons(root) {
       if (confirm("Cancelar este pedido? As unidades voltam para o saldo.")) updateOrderStatus(button.dataset.cancel, "cancelado");
     });
   });
-}
-
-async function confirmOrder(orderId) {
-  const order = orders.find((item) => item.id === Number(orderId));
-  if (!order) return;
-
-  const { error } = await db
-    .from("pedidos")
-    .update({ confirmado_em: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq("id", orderId);
-  if (error) return alert(error.message);
-
-  window.open(whatsappUrl(order), "_blank", "noopener");
-  await loadSelectedCampaign();
 }
 
 async function updateOrderStatus(orderId, status) {
