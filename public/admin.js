@@ -275,6 +275,9 @@ function renderOrders() {
   }
 
   visible.forEach((order) => {
+    const confirmationButton = order.confirmado_em
+      ? `<button class="good" data-confirm="${order.id}" disabled>Pedido confirmado</button>`
+      : `<button class="secondary" data-confirm="${order.id}" ${order.status === "cancelado" ? "disabled" : ""}>Confirmar pedido</button>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${order.numero_pedido}</strong><br><span class="muted">${dateTime(order.created_at)}</span></td>
@@ -284,6 +287,7 @@ function renderOrders() {
       <td>${pill(order.status)}</td>
       <td>
         <div class="row">
+          ${confirmationButton}
           <button class="good" data-paid="${order.id}" ${order.status === "retirado_pago" ? "disabled" : ""}>Pago</button>
           <button class="secondary" data-pending="${order.id}" ${order.status === "aguardando_retirada" ? "disabled" : ""}>Aguardando</button>
           <button class="bad" data-cancel="${order.id}" ${order.status === "cancelado" ? "disabled" : ""}>Cancelar</button>
@@ -297,6 +301,7 @@ function renderOrders() {
 }
 
 function bindOrderButtons(root) {
+  root.querySelectorAll("[data-confirm]").forEach((button) => button.addEventListener("click", () => confirmOrder(button.dataset.confirm)));
   root.querySelectorAll("[data-paid]").forEach((button) => button.addEventListener("click", () => updateOrderStatus(button.dataset.paid, "retirado_pago")));
   root.querySelectorAll("[data-pending]").forEach((button) => button.addEventListener("click", () => updateOrderStatus(button.dataset.pending, "aguardando_retirada")));
   root.querySelectorAll("[data-cancel]").forEach((button) => {
@@ -304,6 +309,15 @@ function bindOrderButtons(root) {
       if (confirm("Cancelar este pedido? As unidades voltam para o saldo.")) updateOrderStatus(button.dataset.cancel, "cancelado");
     });
   });
+}
+
+async function confirmOrder(orderId) {
+  const { error } = await db
+    .from("pedidos")
+    .update({ confirmado_em: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) return alert(error.message);
+  await loadSelectedCampaign();
 }
 
 async function updateOrderStatus(orderId, status) {
