@@ -172,6 +172,12 @@ button.bad {
   background: var(--bad);
 }
 
+button.ghost {
+  background: transparent;
+  color: var(--brand);
+  border: 1px solid var(--brand);
+}
+
 button:disabled {
   opacity: .5;
   cursor: not-allowed;

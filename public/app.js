@@ -1,7 +1,7 @@
 let campaign = null;
 let duplicateOrder = null;
 
-const state = { quantities: {} };
+const state = { quantities: {}, submitting: false };
 const config = window.PADARIA_CONFIG || {};
 const db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
@@ -169,7 +169,15 @@ function renderSummary() {
     onlyDigits(el("customerPhone").value).length >= 10 &&
     items.length;
 
-  el("submitOrder").disabled = !valid;
+  el("submitOrder").disabled = state.submitting || !valid;
+}
+
+function setSubmitState(submitting) {
+  state.submitting = submitting;
+  const button = el("submitOrder");
+  button.classList.toggle("ghost", submitting);
+  button.textContent = submitting ? "Enviando pedido..." : "Finalizar pedido";
+  renderSummary();
 }
 
 function orderRpcPayload(replaceId = null) {
@@ -195,6 +203,8 @@ async function getExistingOrder(orderId) {
 }
 
 async function submitOrder(replaceId = null) {
+  if (state.submitting) return;
+  setSubmitState(true);
   el("message").innerHTML = "";
   el("duplicateBox").classList.add("hidden");
 
@@ -203,23 +213,27 @@ async function submitOrder(replaceId = null) {
 
   if (error) {
     el("message").innerHTML = `<div class="error">${error.message}</div>`;
+    setSubmitState(false);
     return;
   }
 
   if (!result.ok && result.code === "pedido_duplicado") {
     duplicateOrder = await getExistingOrder(result.pedido_id);
     renderDuplicate(duplicateOrder);
+    setSubmitState(false);
     return;
   }
 
   if (!result.ok) {
     el("message").innerHTML = `<div class="error">${result.message || "Não foi possível registrar o pedido."}</div>`;
     await loadCampaignFresh();
+    setSubmitState(false);
     return;
   }
 
   renderConfirmation(result);
   await loadCampaignFresh(false);
+  setSubmitState(false);
 }
 
 function renderDuplicate(order) {
