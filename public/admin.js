@@ -83,9 +83,23 @@ async function loadCampaigns() {
   const { data, error } = await db.from("campanhas").select("*").order("id", { ascending: false });
   if (error) return alert(error.message);
   campaigns = data || [];
+  await deactivateProductsForClosedCampaigns(campaigns);
   if (!selectedCampaignId && campaigns.length) selectedCampaignId = campaigns[0].id;
   renderCampaignList();
   await loadSelectedCampaign();
+}
+
+async function deactivateProductsForClosedCampaigns(campaignRows) {
+  const closedCampaignIds = (campaignRows || [])
+    .filter((campaign) => statusDisablesProducts(campaign.status))
+    .map((campaign) => campaign.id);
+  if (!closedCampaignIds.length) return;
+
+  const { error } = await db
+    .from("produtos_campanha")
+    .update({ ativo: false })
+    .in("campanha_id", closedCampaignIds);
+  if (error) alert(error.message);
 }
 
 function renderCampaignList() {
@@ -116,26 +130,54 @@ function canDeleteCampaign(campaign) {
   );
 }
 
+function statusDisablesProducts(status) {
+  return String(status).startsWith("encerrada") || status === "finalizada";
+}
+
+function clearSelectedCampaignDetails(message = "Selecione uma campanha") {
+  products = [];
+  orders = [];
+  reports = buildReports();
+  el("selectedCampaignTitle").textContent = message;
+  el("selectedCampaignMeta").textContent = "";
+  el("deleteCampaignBtn").disabled = true;
+  renderMetrics();
+  renderProducts();
+  renderOrders();
+  renderProduction();
+}
+
 async function loadSelectedCampaign() {
   const campaign = selectedCampaign();
-  if (!campaign) return;
+  if (!campaign) {
+    clearSelectedCampaignDetails();
+    return;
+  }
 
   el("selectedCampaignTitle").textContent = campaign.titulo;
   el("selectedCampaignMeta").innerHTML = `Retirada: ${dateOnly(campaign.data_retirada)} • Prazo: ${dateTime(campaign.prazo_final_pedidos)} • ${pill(campaign.status)}`;
   el("deleteCampaignBtn").disabled = !canDeleteCampaign(campaign);
 
-  const { data: productRows } = await db
+  const { data: productRows, error: productError } = await db
     .from("produtos_campanha_resumo")
     .select("*")
     .eq("campanha_id", campaign.id)
     .order("ordem_exibicao", { ascending: true });
+  if (productError) {
+    clearSelectedCampaignDetails("Erro ao carregar produtos");
+    return alert(productError.message);
+  }
   products = productRows || [];
 
-  const { data: orderRows } = await db
+  const { data: orderRows, error: orderError } = await db
     .from("pedidos")
     .select("*, itens_pedido(*)")
     .eq("campanha_id", campaign.id)
     .order("id", { ascending: false });
+  if (orderError) {
+    clearSelectedCampaignDetails("Erro ao carregar pedidos");
+    return alert(orderError.message);
+  }
   orders = orderRows || [];
 
   reports = buildReports();
@@ -312,6 +354,13 @@ async function setCampaignStatus(status) {
   if (String(status).startsWith("encerrada")) patch.encerrada_em = new Date().toISOString();
   const { error } = await db.from("campanhas").update(patch).eq("id", campaign.id);
   if (error) return alert(error.message);
+  if (statusDisablesProducts(status)) {
+    const { error: productError } = await db
+      .from("produtos_campanha")
+      .update({ ativo: false })
+      .eq("campanha_id", campaign.id);
+    if (productError) return alert(productError.message);
+  }
   await loadCampaigns();
 }
 
